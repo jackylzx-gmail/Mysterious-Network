@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>進階 HTML/CSS/JS 編輯器</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      font-family: sans-serif;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    #toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 10px; background: #f0f0f0; border-bottom: 1px solid #ccc;
+      flex-shrink: 0;
+    }
+
+    #editor-container {
+      display: flex; flex-direction: column;
+      height: calc(100vh - 40px);
+      user-select: none;
+      flex: 1;
+    }
+
+    .editor-box-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .editor-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid #ccc;
+    }
+
+    .editor-box:last-child {
+      border-right: none;
+    }
+
+    #htmlEditor, #cssEditor, #jsEditor {
+      height: 100%;
+    }
+
+    #drag-bar {
+      height: 6px;
+      background: #aaa;
+      cursor: row-resize;
+      flex-shrink: 0;
+    }
+
+    #preview-container {
+      height: 40vh;
+      border-top: 2px solid #000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #output {
+      flex: 1;
+      width: 100%;
+      border: none;
+    }
+
+    button {
+      margin-left: 10px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+  </style>
+
+  <!-- Monaco Editor -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+</head>
+<body>
+  <div id="toolbar">
+    <div><strong>進階 HTML/CSS/JS 編輯器</strong></div>
+    <div>
+      主題：
+      <select id="theme">
+        <option value="vs">亮</option>
+        <option value="vs-dark">暗</option>
+      </select>
+      <button id="togglePreviewBtn">隱藏預覽</button>
+      <button id="toggleWrapBtn">自動換行：開</button>
+      <button id="saveBtn">另存為.html</button>
+      <button id="clearBtn">清除所有內容</button>
+      <button onclick="window.open('https://www.facebook.com/yizhong.lin.896737/', '_blank')">Facebook</button>
+      <button onclick="window.open('https://www.youtube.com/@jackylzx/featured', '_blank')">YouTube</button>
+      <button id="codepenBtn">🕷️🕸️AI & yizhong-lin🕸️🕷️</button>
+    </div>
+  </div>
+
+  <div id="editor-container">
+    <div class="editor-box-container" id="editors">
+      <div class="editor-box"><div id="htmlEditor"></div></div>
+      <div class="editor-box"><div id="cssEditor"></div></div>
+      <div class="editor-box"><div id="jsEditor"></div></div>
+    </div>
+    <div id="drag-bar"></div>
+    <div id="preview-container">
+      <iframe id="output"></iframe>
+    </div>
+  </div>
+
+  <script>
+    let htmlEditor, cssEditor, jsEditor;
+    let isWordWrapOn = true;
+
+    const previewContainer = document.getElementById('preview-container');
+    const toggleBtn = document.getElementById('togglePreviewBtn');
+    const toggleWrapBtn = document.getElementById('toggleWrapBtn');
+    const dragBar = document.getElementById('drag-bar');
+    const editorsContainer = document.getElementById('editors');
+
+    require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+      htmlEditor = monaco.editor.create(document.getElementById('htmlEditor'), {
+        value: '<!-- 輸入 HTML 內容 -->\n',
+        language: 'html',
+        theme: 'vs',
+        automaticLayout: true,
+        wordWrap: 'on'
+      });
+
+      cssEditor = monaco.editor.create(document.getElementById('cssEditor'), {
+        value: '/* 輸入 CSS 內容 */\n',
+        language: 'css',
+        theme: 'vs',
+        automaticLayout: true,
+        wordWrap: 'on'
+      });
+
+      jsEditor = monaco.editor.create(document.getElementById('jsEditor'), {
+        value: '// 輸入 JavaScript 程式碼\n',
+        language: 'javascript',
+        theme: 'vs',
+        automaticLayout: true,
+        wordWrap: 'on'
+      });
+
+      document.getElementById("theme").addEventListener("change", function () {
+        const theme = this.value;
+        monaco.editor.setTheme(theme);
+      });
+
+      [htmlEditor, cssEditor, jsEditor].forEach(editor => {
+        editor.onDidChangeModelContent(updatePreview);
+      });
+
+      updatePreview();
+    });
+
+    function updatePreview() {
+      const html = htmlEditor.getValue();
+      const css = `<style>${cssEditor.getValue()}</style>`;
+      const js = `<script>${jsEditor.getValue()}<\/script>`;
+      const fullCode = `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="UTF-8">${css}</head>
+          <body>${html}${js}</body>
+        </html>
+      `;
+      document.getElementById("output").srcdoc = fullCode;
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      if (previewContainer.style.display === 'none') {
+        previewContainer.style.display = 'flex';
+        dragBar.style.display = 'block';
+        toggleBtn.textContent = '隱藏預覽';
+        previewContainer.style.height = '40vh';
+        editorsContainer.style.flex = '1';
+      } else {
+        previewContainer.style.display = 'none';
+        dragBar.style.display = 'none';
+        toggleBtn.textContent = '顯示預覽';
+        editorsContainer.style.flex = '1 1 100%';
+      }
+    });
+
+    toggleWrapBtn.addEventListener('click', () => {
+      isWordWrapOn = !isWordWrapOn;
+      const newWrap = isWordWrapOn ? 'on' : 'off';
+      toggleWrapBtn.textContent = `自動換行：${isWordWrapOn ? '開' : '關'}`;
+      [htmlEditor, cssEditor, jsEditor].forEach(editor => {
+        editor.updateOptions({ wordWrap: newWrap });
+      });
+    });
+
+    dragBar.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      document.body.style.cursor = 'row-resize';
+
+      const startY = e.clientY;
+      const startPreviewHeight = previewContainer.getBoundingClientRect().height;
+      const startEditorsHeight = editorsContainer.getBoundingClientRect().height;
+
+      function onMouseMove(e) {
+        const dy = startY - e.clientY;
+        let newPreviewHeight = startPreviewHeight + dy;
+        let newEditorsHeight = startEditorsHeight - dy;
+
+        const minHeight = 100;
+        if (newPreviewHeight < minHeight) newPreviewHeight = minHeight;
+        if (newEditorsHeight < minHeight) newEditorsHeight = minHeight;
+
+        previewContainer.style.height = newPreviewHeight + 'px';
+        editorsContainer.style.height = newEditorsHeight + 'px';
+        editorsContainer.style.flex = 'none';
+      }
+
+      function onMouseUp() {
+        document.body.style.cursor = '';
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      }
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    });
+
+    // 🔽 新增功能按鈕事件
+
+    // 另存為 .html
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      const html = htmlEditor.getValue();
+      const css = `<style>${cssEditor.getValue()}</style>`;
+      const js = `<script>${jsEditor.getValue()}<\/script>`;
+      const fullCode = `
+        <!DOCTYPE html>
+        <html>
+          <head><meta charset="UTF-8">${css}</head>
+          <body>${html}${js}</body>
+        </html>
+      `;
+
+      const blob = new Blob([fullCode], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'your_page.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // 清除所有內容
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      htmlEditor.setValue('');
+      cssEditor.setValue('');
+      jsEditor.setValue('');
+    });
+
+    // CodePen 新視窗開啟
+    document.getElementById('codepenBtn').addEventListener('click', () => {
+      window.open('https://codepen.io/yizhong-lin/embed/gOZXWrd', '_blank');
+    });
+  </script>
+</body>
+</html>
